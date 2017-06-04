@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>two-checkout demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../iron-flex-layout/iron-flex-layout.html">
+    <link rel="import" href="../../paper-input/paper-input.html">
+    <link rel="import" href="../../paper-button/paper-button.html">
+    <link rel="import" href="../../show-json/show-json.html">
+    <link rel="import" href="../two-checkout.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Basic two-checkout demo</h3>
+      <demo-snippet>
+        <template is="dom-bind">
+          <style is="custom-style">
+            .row {
+              @apply --layout;
+              /*flex-wrap: nowrap;*/
+            }
+
+            paper-input: {
+              @apply --layout-flex;
+            }
+
+            .row paper-input:not(:last-child) {
+              flex: 4 0 1px;
+              margin-right: 4px;
+            }
+
+            .error {
+              color: red;
+            }
+          </style>
+
+          <paper-input label="Publishable Key" value="{{publishableKey}}"></paper-input>
+          <paper-input label="Seller Id" value="{{sellerId}}"></paper-input>
+          <paper-input label="Credit Card Number" value="{{ccNo}}"></paper-input>
+          <span>🔓 Use <a href="https://www.2checkout.com/documentation/sandbox/test-data">Test Numbers</a> Only!</span>
+
+          <section class="row">
+            <paper-input label="MM" value="{{expMonth}}"></paper-input>
+            <paper-input label="YY" value="{{expYear}}"></paper-input>
+            <paper-input label="CVV" value="{{cvv}}"></paper-input>
+          </section>
+
+          <paper-button onclick="submit()">Submit</paper-button>
+
+          <two-checkout id="tco"
+              sandbox
+              publishable-key="[[publishableKey]]"
+              seller-id="[[sellerId]]"
+              cc-no="[[ccNo]]"
+              exp-month="[[expMonth]]"
+              exp-year="[[expYear]]"
+              cvv="[[cvv]]"
+              token="{{token}}"
+              response="{{response}}"
+              error="{{error}}"
+          ></two-checkout>
+
+          <span class="error">[[error]]</span>
+
+          <show-json hide-copy-button json="[[response]]"></show-json>
+
+          <script>
+            const submit = () => tco.requestToken();
+          </script>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>

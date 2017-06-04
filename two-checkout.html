@@ -1,0 +1,224 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+`two-checkout`
+Polymer Wrapper for 2Checkouts payments
+
+## Usage
+
+    <two-checkout id="tco"
+        publishable-key="[[publishableKey]]"
+        seller-id="[[sellerId]]"
+        cc-no="[[ccNo]]"
+        exp-month="[[expMonth]]"
+        exp-year="[[expYear]]"
+        cvv="[[cvv]]"
+        token="{{token}}"
+        response="{{response}}"
+        error="{{error}}"
+    ></two-checkout>
+
+@demo demo/index.html
+-->
+<dom-module id="two-checkout">
+  <script>
+    Polymer({
+      is: 'two-checkout',
+      properties: {
+        /**
+         * Whether to use sandbox mode or not.
+         * @type {Boolean}
+         */
+        sandbox: Boolean,
+
+        /**
+         * The publishable key to use with 2Checkout.
+         */
+        publishableKey: {
+          type: String,
+          observer: '_publishableKeyChanged',
+        },
+
+        /**
+         * 2Checkout Seller ID.
+         * @type {String}
+         */
+        sellerId: String,
+
+        /**
+         * Credit Card Number.
+         * @type {Number}
+         */
+        ccNo: Number,
+
+        /**
+         * Expiry Month.
+         * @type {Number}
+         */
+        expMonth: Number,
+
+        /**
+         * Expiry Year.
+         * @type {Number}
+         */
+        expYear: Number,
+
+        /**
+         * CVV Number.
+         * @type {Number}
+         */
+        cvv: Number,
+
+        /**
+         * True when the public key is available for use.
+         */
+        keyAvailable: {
+          type: Boolean,
+          notify: true,
+          value: false,
+          readOnly: true,
+        },
+
+        /**
+         * Payment Token returned by 2Checkout. Use this to make payments.
+         */
+        token: {
+          type: String,
+          notify: true,
+          readOnly: true,
+        },
+
+        /**
+         * Last Four digits of the credit card returned by 2Checkout.
+         */
+        lastFour: {
+          type: String,
+          notify: true,
+          readOnly: true,
+        },
+
+        /**
+         * Card type returned by 2Checkout. e.g. 'VS'.
+         */
+        cardType: {
+          type: String,
+          notify: true,
+          readOnly: true,
+        },
+
+        /**
+         * Response returned by 2Checkout on success.
+         */
+        response: {
+          type: Object,
+          notify: true,
+          readOnly: true,
+          observer: '_responseChanged',
+        },
+
+        error: {
+          type: String,
+          readOnly: true,
+          notify: true,
+        },
+
+        _error: {
+          type: Object,
+          observer: '_errorChanged',
+        },
+      },
+
+      /**
+       * LIFECYCLE CALLBACKS
+       */
+
+      ready: function() {
+        if(!window.TCO) {
+          this._loadTcoJs();
+        }
+      },
+
+      /**
+       * PUBLIC METHODS
+       */
+
+      /**
+       * Request a token from 2Checkout.
+       */
+      requestToken: function() {
+        if (!this.keyAvailable) {
+          console.warn('Cannot request token, key unavailable');
+        } else {
+        this._requestToken()
+          .then((data) => this._setResponse(data))
+          .catch((error) => this._error = error);
+       }
+      },
+
+      /**
+       * OBSERVERS
+       */
+
+      _publishableKeyChanged: function(key) {
+        if (!key) {return;}
+        const mode = this.sandbox ? 'sandbox' : 'production';
+        TCO.loadPubKey(mode, this._keyAvailable());
+      },
+
+      _responseChanged: function(response) {
+        this.dispatchEvent(new CustomEvent('tco-token',
+          {bubbles: true, composed: true, detail: response}
+        ));
+        const token = response.response.token.token;
+        const lastFour = response.response.paymentMethod.cardNum.split('-').pop();
+        const cardType = response.response.paymentMethod.cardType;
+        this._setToken(token);
+        this._setLastFour(lastFour);
+        this._setCardType(cardType);
+      },
+
+      _errorChanged: function(error) {
+        this.dispatchEvent(new CustomEvent('tco-error',
+          {bubbles: true, composed: true, error}
+        ));
+        this._setError(error.errorMsg);
+      },
+
+      /**
+       * PRIVATE METHODS
+       */
+
+      _loadTcoJs: function() {
+        /* eslint-disable no-console */
+        const script = this.resolveUrl('./two-checkout-script.html');
+        const loaded = () => console.warn('Loading 2co.js from within component.');
+        const error = () => console.error('Could not load 2co.js!');
+        const optAsync = false;
+        this.importHref(script, loaded, error, optAsync);
+        /* eslint-enable no-console */
+      },
+
+      _keyAvailable: function() {
+        this.dispatchEvent(new CustomEvent('key-available'));
+        this._setKeyAvailable(true);
+      },
+
+      _requestToken: function() {
+        const sellerId = this.sellerId;
+        const publishableKey = this.publishableKey;
+        const ccNo = this.ccNo;
+        const expMonth = this.expMonth;
+        const expYear = this.expYear;
+        const cvv = this.cvv;
+        const params = {sellerId, publishableKey, ccNo, expMonth, expYear, cvv};
+        return new Promise((resolve, reject) => {
+          TCO.requestToken((data) => resolve(data), (err) => reject(err), params);
+        });
+      },
+    });
+    /**
+     * @fires 'tco-token'
+     * @fired 'tco-error'
+     */
+  </script>
+</dom-module>
