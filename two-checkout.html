@@ -133,17 +133,30 @@ Polymer Wrapper for 2Checkouts payments
       },
 
       /**
+       * Resets the error, response, cardType, lastFour, and token values.
+       */
+      reset: function() {
+        this._error = undefined;
+        this._setResponse(undefined);
+      },
+
+      /**
        * OBSERVERS
        */
 
 
       _responseChanged: function(response) {
-        this.dispatchEvent(new CustomEvent('tco-token',
-          {bubbles: true, composed: true, detail: response}
-        ));
-        const token = response.response.token.token;
-        const lastFour = response.response.paymentMethod.cardNum.split('-').pop();
-        const cardType = response.response.paymentMethod.cardType;
+        let token = undefined;
+        let lastFour = undefined;
+        let cardType = undefined;
+        if (response) {
+          this.dispatchEvent(new CustomEvent('tco-token',
+            {bubbles: true, composed: true, detail: {response}}
+          ));
+          token = response.response.token.token;
+          lastFour = response.response.paymentMethod.cardNum.split('-').pop();
+          cardType = response.response.paymentMethod.cardType;
+        }
         this._setToken(token);
         this._setLastFour(lastFour);
         this._setCardType(cardType);
@@ -153,7 +166,7 @@ Polymer Wrapper for 2Checkouts payments
         this.dispatchEvent(new CustomEvent('tco-error',
           {bubbles: true, composed: true, error}
         ));
-        this._setError(error.errorMsg ? error.errorMsg : error);
+        this._setError(error ? error.errorMsg ? error.errorMsg : error : undefined);
       },
 
       /**
