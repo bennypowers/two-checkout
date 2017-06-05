@@ -33,11 +33,9 @@ Polymer Wrapper for 2Checkouts payments
 
         /**
          * The publishable key to use with 2Checkout.
+         * @type {String}
          */
-        publishableKey: {
-          type: String,
-          observer: '_publishableKeyChanged',
-        },
+        publishableKey: String,
 
         /**
          * 2Checkout Seller ID.
@@ -68,16 +66,6 @@ Polymer Wrapper for 2Checkouts payments
          * @type {Number}
          */
         cvv: Number,
-
-        /**
-         * True when the public key is available for use.
-         */
-        keyAvailable: {
-          type: Boolean,
-          notify: true,
-          value: false,
-          readOnly: true,
-        },
 
         /**
          * Payment Token returned by 2Checkout. Use this to make payments.
@@ -129,16 +117,6 @@ Polymer Wrapper for 2Checkouts payments
       },
 
       /**
-       * LIFECYCLE CALLBACKS
-       */
-
-      ready: function() {
-        if(!window.TCO) {
-          this._loadTcoJs();
-        }
-      },
-
-      /**
        * PUBLIC METHODS
        */
 
@@ -146,24 +124,18 @@ Polymer Wrapper for 2Checkouts payments
        * Request a token from 2Checkout.
        */
       requestToken: function() {
-        if (!this.keyAvailable) {
-          console.warn('Cannot request token, key unavailable');
-        } else {
-        this._requestToken()
-          .then((data) => this._setResponse(data))
-          .catch((error) => this._error = error);
-       }
+        const mode = this.sandbox ? 'sandbox' : 'production';
+        const request = () => this._requestToken()
+                               .then((data) => this._setResponse(data))
+                               .catch((error) => this._error = error);
+        const run = () => TCO.loadPubKey(mode, request);
+        window.TCO ? run() : this._loadTcoJs(run);
       },
 
       /**
        * OBSERVERS
        */
 
-      _publishableKeyChanged: function(key) {
-        if (!key) {return;}
-        const mode = this.sandbox ? 'sandbox' : 'production';
-        TCO.loadPubKey(mode, this._keyAvailable());
-      },
 
       _responseChanged: function(response) {
         this.dispatchEvent(new CustomEvent('tco-token',
@@ -181,32 +153,30 @@ Polymer Wrapper for 2Checkouts payments
         this.dispatchEvent(new CustomEvent('tco-error',
           {bubbles: true, composed: true, error}
         ));
-        this._setError(error.errorMsg);
+        this._setError(error.errorMsg ? error.errorMsg : error);
       },
 
       /**
        * PRIVATE METHODS
        */
 
-      _loadTcoJs: function() {
+      _loadTcoJs: function(success) {
         /* eslint-disable no-console */
         const script = this.resolveUrl('./two-checkout-script.html');
-        const loaded = () => console.warn('Loading 2co.js from within component.');
+        const loaded = () => {
+          console.warn('Loading 2co.js from within component.');
+          success();
+        };
         const error = () => console.error('Could not load 2co.js!');
         const optAsync = false;
         this.importHref(script, loaded, error, optAsync);
         /* eslint-enable no-console */
       },
 
-      _keyAvailable: function() {
-        this.dispatchEvent(new CustomEvent('key-available'));
-        this._setKeyAvailable(true);
-      },
-
       _requestToken: function() {
         const sellerId = this.sellerId;
         const publishableKey = this.publishableKey;
-        const ccNo = this.ccNo;
+        const ccNo = this.ccNo; // parseInt(this.ccNo.replace(/ /g,''));
         const expMonth = this.expMonth;
         const expYear = this.expYear;
         const cvv = this.cvv;
@@ -215,10 +185,19 @@ Polymer Wrapper for 2Checkouts payments
           TCO.requestToken((data) => resolve(data), (err) => reject(err), params);
         });
       },
+
     });
     /**
-     * @fires 'tco-token'
-     * @fired 'tco-error'
+     * Fired when a token is received.
+     *
+     * @event tco-token
+     * @param {Object} response 2Checkout token response.
+     */
+
+    /**
+     * Fired when an error is received.
+     *
+     * @event tco-error
      */
   </script>
 </dom-module>
